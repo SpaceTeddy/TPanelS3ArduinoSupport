@@ -1,12 +1,12 @@
 {
   "name": "TPanelS3ArduinoSupport",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Arduino support library for TPanel S3",
   "keywords": "tpanel, s3, esp32, display",
   "authors": [
     {
-      "name": "Dein Name",
-      "email": "deine@email.de"
+      "name": "Space Teddy",
+      "email": "spaceteddy1@gmx.net"
     }
   ],
   "repository": {
