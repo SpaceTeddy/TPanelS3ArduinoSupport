@@ -25,9 +25,9 @@
     ],
     "srcFilter": [
       "+<src/>",
-      "+<lib/Arduino_GFX-1.4.6/src/>",
-      "+<lib/tpanels3>",
-      "+<lib/XL95x5_Driver>"
+      "+<lib/Arduino_GFX-1.4.6/src/**/*.cpp>",
+      "+<lib/tpanels3/src/**/*.cpp>",
+      "+<lib/XL95x5_Driver/src/**/*.cpp>"
     ]
   },
   "export": {
@@ -41,5 +41,6 @@
     ]
   }
 }
+
 
 
