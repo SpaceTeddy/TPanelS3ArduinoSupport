@@ -16,6 +16,20 @@
   "license": "MIT",
   "frameworks": "arduino",
   "platforms": "espressif32",
+  "build": {
+    "includeDir": "src",
+    "flags": [
+      "-I lib/Arduino_GFX-1.4.6/src",
+      "-I lib/tpanels3",
+      "-I lib/XL95x5_Driver"
+    ],
+    "srcFilter": [
+      "+<src/>",
+      "+<lib/Arduino_GFX-1.4.6/src/>",
+      "+<lib/tpanels3>",
+      "+<lib/XL95x5_Driver>"
+    ]
+  },
   "export": {
     "include": [
       "src",
@@ -27,4 +41,5 @@
     ]
   }
 }
+
 
