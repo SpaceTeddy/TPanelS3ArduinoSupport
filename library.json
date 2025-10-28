@@ -1,8 +1,8 @@
 {
   "name": "TPanelS3ArduinoSupport",
   "version": "0.0.1",
-  "description": "Arduino support library for TPanel S3",
-  "keywords": "tpanel, s3, esp32, display",
+  "description": "Arduino support library for TPanelS3",
+  "keywords": "tpanels3, esp32, display, lvgl",
   "authors": [
     {
       "name": "Space Teddy",
@@ -60,6 +60,7 @@
     ]
   }
 }
+
 
 
 
