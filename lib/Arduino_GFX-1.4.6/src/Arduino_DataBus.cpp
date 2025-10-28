@@ -206,4 +206,5 @@ void Arduino_DataBus::digitalWrite(uint8_t pin, uint8_t val)
 
 int Arduino_DataBus::digitalRead(uint8_t pin)
 {
+  return 0;
 }
