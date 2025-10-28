@@ -23,12 +23,8 @@
       "version": "9.2.2"
     },
     {
-      "owner": "mmMicky",
       "name": "TouchLib",
-      "version": "^0.0.2",
-      "platforms": [
-        "espressif32"
-      ]
+      "version": "https://github.com/mmMicky/TouchLib.git#v0.0.2"
     }
   ],
   "build": {
@@ -64,6 +60,7 @@
     ]
   }
 }
+
 
 
 
