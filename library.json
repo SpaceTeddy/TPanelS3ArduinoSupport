@@ -18,7 +18,7 @@
   "platforms": "espressif32",
   "dependencies": {
     "lvgl/lvgl": "9.2.2",
-    "mmMicky/TouchLib": "^0.0.2"
+    "TouchLib": "https://github.com/mmMicky/TouchLib.git#v0.0.2"
   },
   "build": {
     "srcDir": ".",
@@ -53,4 +53,5 @@
     ]
   }
 }
+
 
