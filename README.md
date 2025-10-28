@@ -46,10 +46,15 @@ lib_deps =
 ```cpp
 #include <tpanels3.h>
 
-TPanelS3 panel;
+TPanelS3 tpanels3;
 
 void setup() {
-    panel.initTPanelS3();
+    // --- initialize display & touch hardware ---
+    tpanels3.initTPanelS3();
+    tpanels3.setRotation(0);     // optional: 0=portrait, 1=landscape, etc.
+
+    // Set initial backlight brightness to 45%
+    tpanels3.set_backlight_brightness(45);  // Set to 45%
 }
 ```
 
