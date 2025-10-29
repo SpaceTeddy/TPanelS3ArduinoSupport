@@ -1,7 +1,7 @@
 {
   "name": "TPanelS3ArduinoSupport",
   "version": "0.0.1",
-  "description": "Arduino support library for TPanelS3",
+  "description": "Arduino support library for TPanelS3 with LVGL 9.2.2",
   "keywords": "tpanels3, esp32, display, lvgl",
   "authors": [
     {
