@@ -32,7 +32,6 @@
     "includeDir": "src",
     "flags": [
       "-I lib/Arduino_GFX-1.4.6/src",
-      "-I lib/tpanels3",
       "-I lib/XL95x5_driver"
     ],
     "srcFilter": [
@@ -43,8 +42,6 @@
       "+<lib/Arduino_GFX-1.4.6/src/canvas/*.cpp>",
       "+<lib/Arduino_GFX-1.4.6/src/databus/*.cpp>",
       "+<lib/Arduino_GFX-1.4.6/src/display/*.cpp>",
-      "+<lib/tpanels3/*.cpp>",
-      "+<lib/tpanels3/*.c>",
       "+<lib/XL95x5_driver/*.cpp>",
       "+<lib/XL95x5_driver/*.c>"
     ]
