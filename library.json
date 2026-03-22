@@ -35,15 +35,16 @@
       "-I lib/XL95x5_driver"
     ],
     "srcFilter": [
-      "+<src/*.cpp>",
-      "+<src/*.c>",
-      "+<lib/Arduino_GFX-1.4.6/src/*.cpp>",
-      "+<lib/Arduino_GFX-1.4.6/src/*.c>",
-      "+<lib/Arduino_GFX-1.4.6/src/canvas/*.cpp>",
-      "+<lib/Arduino_GFX-1.4.6/src/databus/*.cpp>",
-      "+<lib/Arduino_GFX-1.4.6/src/display/*.cpp>",
-      "+<lib/XL95x5_driver/*.cpp>",
-      "+<lib/XL95x5_driver/*.c>"
+      "+<src/tpanels3.cpp>",
+      "+<lib/Arduino_GFX-1.4.6/src/Arduino_DataBus.cpp>",
+      "+<lib/Arduino_GFX-1.4.6/src/Arduino_G.cpp>",
+      "+<lib/Arduino_GFX-1.4.6/src/Arduino_GFX.cpp>",
+      "+<lib/Arduino_GFX-1.4.6/src/Arduino_TFT.cpp>",
+      "+<lib/Arduino_GFX-1.4.6/src/Arduino_TFT_18bit.cpp>",
+      "+<lib/Arduino_GFX-1.4.6/src/databus/Arduino_ESP32RGBPanel.cpp>",
+      "+<lib/Arduino_GFX-1.4.6/src/databus/Arduino_XL9535SWSPI.cpp>",
+      "+<lib/Arduino_GFX-1.4.6/src/display/Arduino_RGB_Display.cpp>",
+      "+<lib/XL95x5_driver/XL95x5_driver.cpp>"
     ]
   },
   "export": {
