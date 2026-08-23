@@ -71,8 +71,16 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
   _panel_config->num_fbs = 1;
   _panel_config->bounce_buffer_size_px = 0; // no bounce buffer, DMA the full framebuffer directly
 #endif
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+  // IDF 5.x retired both alignment fields: sram_trans_align is ignored, and
+  // psram_trans_align shares a union with dma_burst_size -- so the assignment
+  // below used to set a 64 byte DMA burst while reading as an alignment. Same
+  // value, said out loud. Allowed: 0 (driver default) or a power of two.
+  _panel_config->dma_burst_size = 64;
+#else
   _panel_config->sram_trans_align = 8;
   _panel_config->psram_trans_align = 64;
+#endif
   _panel_config->hsync_gpio_num = _hsync;
   _panel_config->vsync_gpio_num = _vsync;
   _panel_config->de_gpio_num = _de;
