@@ -1,7 +1,5 @@
 #include "../Arduino_DataBus.h"
 
-#if (ESP_ARDUINO_VERSION_MAJOR < 3)
-
 #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
 
 #include "../Arduino_GFX.h"
@@ -521,8 +519,6 @@ uint16_t *Arduino_RGB_Display::getFramebuffer()
 }
 
 #endif // #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
-
-#endif // #if (ESP_ARDUINO_VERSION_MAJOR < 3)
 
 void Arduino_RGB_Display::XL_pinMode(uint8_t pin, uint8_t mode)
 {

@@ -11,12 +11,13 @@ Arduino support library for TPanel S3 with integrated display drivers.
 ## Installation
 
 ### PlatformIO
-> **Important:** the `platform = espressif32 @6.12.0` pin below is required, not
-> just a suggestion. The vendored `Arduino_RGB_Display` (used for the panel)
-> is compiled only when `ESP_ARDUINO_VERSION_MAJOR < 3`. Bumping the
-> `espressif32` platform to a version that pulls Arduino-ESP32 core 3.x will
-> make that class disappear and break the build. Do not upgrade the platform
-> version without first checking that this class still compiles.
+> **Important:** the `platform = espressif32 @6.12.0` pin below reflects the
+> only combination actually tested on real hardware so far. `Arduino_ESP32RGBPanel`
+> now has a code path for Arduino-ESP32 core 3.x (IDF 5.x, via
+> `esp_lcd_rgb_panel_get_frame_buffer()` instead of the old private-struct hack),
+> but that path has **not been verified on a real TPanel S3 board**. Before
+> bumping the `espressif32` platform version, flash and visually confirm the
+> display still comes up correctly.
 
 ```ini
 [env]

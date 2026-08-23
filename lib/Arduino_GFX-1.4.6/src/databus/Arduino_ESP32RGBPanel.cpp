@@ -1,7 +1,5 @@
 #include "Arduino_ESP32RGBPanel.h"
 
-#if (ESP_ARDUINO_VERSION_MAJOR < 3)
-
 #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
 
 Arduino_ESP32RGBPanel::Arduino_ESP32RGBPanel(
@@ -46,7 +44,11 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
 {
   esp_lcd_rgb_panel_config_t *_panel_config = (esp_lcd_rgb_panel_config_t *)heap_caps_calloc(1, sizeof(esp_lcd_rgb_panel_config_t), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
 
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+  _panel_config->clk_src = LCD_CLK_SRC_DEFAULT;
+#else
   _panel_config->clk_src = LCD_CLK_SRC_PLL160M;
+#endif
   _panel_config->timings.pclk_hz = (_prefer_speed == GFX_NOT_DEFINED) ? _speed : _prefer_speed;
   _panel_config->timings.h_res = w;
   _panel_config->timings.v_res = h;
@@ -64,6 +66,11 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
   _panel_config->timings.flags.pclk_idle_high = _pclk_idle_high;
 
   _panel_config->data_width = 16; // RGB565 in parallel mode, thus 16bit in width
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+  _panel_config->bits_per_pixel = 16;
+  _panel_config->num_fbs = 1;
+  _panel_config->bounce_buffer_size_px = 0; // no bounce buffer, DMA the full framebuffer directly
+#endif
   _panel_config->sram_trans_align = 8;
   _panel_config->psram_trans_align = 64;
   _panel_config->hsync_gpio_num = _hsync;
@@ -113,13 +120,28 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
   _panel_config->disp_gpio_num = GPIO_NUM_NC;
 
   _panel_config->flags.disp_active_low = 0;
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+  _panel_config->flags.refresh_on_demand = false;
+  _panel_config->flags.double_fb = false;
+  _panel_config->flags.no_fb = false;
+  _panel_config->flags.bb_invalidate_cache = false;
+#else
   _panel_config->flags.relax_on_idle = 0;
+#endif
   _panel_config->flags.fb_in_psram = 1; // allocate frame buffer in PSRAM
 
   ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(_panel_config, &_panel_handle));
   ESP_ERROR_CHECK(esp_lcd_panel_reset(_panel_handle));
   ESP_ERROR_CHECK(esp_lcd_panel_init(_panel_handle));
 
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+  // Core 3.x / IDF 5.x: use the public API instead of reaching into the
+  // driver-private esp_rgb_panel_t struct (layout is not guaranteed stable).
+  void *frame_buffer = nullptr;
+  ESP_ERROR_CHECK(esp_lcd_rgb_panel_get_frame_buffer(_panel_handle, 1, &frame_buffer));
+
+  return (uint16_t *)frame_buffer;
+#else
   uint16_t color = random(0xffff);
   ESP_ERROR_CHECK(_panel_handle->draw_bitmap(_panel_handle, 0, 0, 1, 1, &color));
 
@@ -129,7 +151,6 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
   LCD_CAM.lcd_ctrl2.lcd_hsync_idle_pol = _hsync_polarity;
 
   return (uint16_t *)_rgb_panel->fb;
+#endif
 }
 #endif // #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
-
-#endif // #if (ESP_ARDUINO_VERSION_MAJOR < 3)

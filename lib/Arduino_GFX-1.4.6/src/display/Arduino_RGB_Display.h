@@ -1,6 +1,8 @@
 #include "../Arduino_DataBus.h"
 
-#if (ESP_ARDUINO_VERSION_MAJOR < 3)
+// This file has no Arduino-ESP32 core/IDF-version-specific code of its own -
+// the version-sensitive framebuffer access lives in Arduino_ESP32RGBPanel,
+// so it does not need to be restricted to core < 3 here.
 
 #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
 
@@ -2326,5 +2328,3 @@ private:
 #endif // _ARDUINO_RGB_DISPLAY_H_
 
 #endif // #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
-
-#endif // #if (ESP_ARDUINO_VERSION_MAJOR < 3)

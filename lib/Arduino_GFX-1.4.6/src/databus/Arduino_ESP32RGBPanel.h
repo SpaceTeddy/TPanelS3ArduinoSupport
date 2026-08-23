@@ -1,6 +1,9 @@
 #include "Arduino_DataBus.h"
 
-#if (ESP_ARDUINO_VERSION_MAJOR < 3)
+// NOTE: Arduino-ESP32 core 3.x (IDF 5.x) is supported via
+// esp_lcd_rgb_panel_get_frame_buffer() (public API); core 2.x still uses the
+// private esp_rgb_panel_t struct hack below, which only matches the IDF
+// version bundled with core 2.x and must stay guarded accordingly.
 
 #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
 
@@ -12,6 +15,13 @@
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_interface.h"
+
+#include "esp32s3/rom/cache.h"
+// This function is located in ROM (also see esp_rom/${target}/ld/${target}.rom.ld)
+// Available on ESP32-S3 regardless of Arduino-ESP32 core/IDF version.
+extern int Cache_WriteBack_Addr(uint32_t addr, uint32_t size);
+
+#if (!defined(ESP_ARDUINO_VERSION_MAJOR)) || (ESP_ARDUINO_VERSION_MAJOR < 3)
 #include "esp_private/gdma.h"
 #include "esp_pm.h"
 #include "hal/dma_types.h"
@@ -19,11 +29,9 @@
 #include "hal/lcd_hal.h"
 #include "hal/lcd_ll.h"
 
-#include "esp32s3/rom/cache.h"
-// This function is located in ROM (also see esp_rom/${target}/ld/${target}.rom.ld)
-extern int Cache_WriteBack_Addr(uint32_t addr, uint32_t size);
-
 // extract from esp-idf esp_lcd_rgb_panel.c
+// Private/internal IDF driver struct - layout is tied to the IDF version
+// bundled with Arduino-ESP32 core 2.x. Do not use this on core 3.x+.
 struct esp_rgb_panel_t
 {
   esp_lcd_panel_t base;                                        // Base class of generic lcd panel
@@ -54,6 +62,7 @@ struct esp_rgb_panel_t
   } flags;
   dma_descriptor_t dma_nodes[]; // DMA descriptor pool of size `num_dma_nodes`
 };
+#endif // #if (!defined(ESP_ARDUINO_VERSION_MAJOR)) || (ESP_ARDUINO_VERSION_MAJOR < 3)
 
 class Arduino_ESP32RGBPanel
 {
@@ -94,11 +103,11 @@ private:
   uint16_t _pclk_idle_high;
 
   esp_lcd_panel_handle_t _panel_handle = NULL;
+#if (!defined(ESP_ARDUINO_VERSION_MAJOR)) || (ESP_ARDUINO_VERSION_MAJOR < 3)
   esp_rgb_panel_t *_rgb_panel;
+#endif
 };
 
 #endif // _ARDUINO_ESP32RGBPANEL_H_
 
 #endif // #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
-
-#endif // #if (ESP_ARDUINO_VERSION_MAJOR < 3)
