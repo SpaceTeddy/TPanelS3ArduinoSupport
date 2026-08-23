@@ -47,6 +47,27 @@ lib_deps =
     https://github.com/SpaceTeddy/TPanelS3ArduinoSupport.git
 ```
 
+### Testing Arduino-ESP32 core 3.x
+
+The official PlatformIO `espressif32` registry package has historically lagged
+behind on core 3.x support. The common workaround is the community
+[pioarduino](https://github.com/pioarduino/platform-espressif32) fork, which
+tracks current Arduino-ESP32 releases. To test the core-3.x code path added
+above, swap the `platform` line for one of:
+
+```ini
+; latest stable release
+platform = https://github.com/pioarduino/platform-espressif32/releases/download/stable/platform-espressif32.zip
+
+; or pin an exact release, e.g.
+platform = https://github.com/pioarduino/platform-espressif32/releases/download/55.03.31/platform-espressif32.zip
+```
+
+Everything else in the `[env]` block can stay the same. Double check
+`board_build.memory_type` / PSRAM-related board options still apply after the
+switch - board config keys have occasionally been renamed between core
+2.x and 3.x releases.
+
 ### Arduino IDE
 *Not recommended - use PlatformIO instead*
 

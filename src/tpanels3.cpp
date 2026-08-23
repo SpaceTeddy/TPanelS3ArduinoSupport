@@ -157,9 +157,14 @@ void TPanelS3::lvglTouchRead(::lv_indev_t* /*indev*/, ::lv_indev_data_t* data) {
  *  6. Attach touch interrupt and bring up the panel
  */
 void TPanelS3::initTPanelS3() {
-  // Initialize backlight PWM (channel 0, 15kHz, 8-bit resolution)
+  // Initialize backlight PWM (15kHz, 8-bit resolution).
+  // Core 3.x removed ledcSetup()/ledcAttachPin() in favor of ledcAttach(pin, freq, resolution).
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+  ledcAttach(LCD_BL, 15000, 8);
+#else
   ledcSetup(0, 15000, 8);
   ledcAttachPin(LCD_BL, 0);
+#endif
 
   // --- I²C for touch
   Wire.begin(IIC_SDA, IIC_SCL);
@@ -260,6 +265,10 @@ void TPanelS3::initTPanelS3() {
  */
 uint8_t TPanelS3::set_backlight_brightness(uint8_t value)
 {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
+    ledcWrite(LCD_BL, value); // core 3.x: ledcWrite takes the GPIO pin, not a channel
+#else
     ledcWrite(0, value);
+#endif
     return value;
 }
