@@ -88,7 +88,9 @@ void XL95x5::begin(bool A0, bool A1, bool A2)
         // If using interrupt set interrupt value to pin
         if (_Interrupt_flag)
         {
-            pinMode(_interruptPin, INPUT_PULLUP);
+            // NOTE: must be the global Arduino pinMode (::), not XL95x5::pinMode() -
+            // this configures the ESP32 GPIO, not an I2C expander register.
+            ::pinMode(_interruptPin, INPUT_PULLUP);
             attachInterrupt(_interruptPin, (*_interruptFunction), FALLING);
         }
     }

@@ -75,7 +75,8 @@ public:
 
   /**
    * @brief Set the backlight brightness.
-   * 
+   *
+   * @note value is a raw 8-bit PWM duty cycle, NOT a percentage.
    * @param value Brightness level (0-255).
    * @return The set brightness level (0-255).
    */

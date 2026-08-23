@@ -157,9 +157,10 @@ void TPanelS3::lvglTouchRead(::lv_indev_t* /*indev*/, ::lv_indev_data_t* data) {
  *  6. Attach touch interrupt and bring up the panel
  */
 void TPanelS3::initTPanelS3() {
-  // Initialize backlight PWM pin
-  pinMode(LCD_BL, OUTPUT);
-  
+  // Initialize backlight PWM (channel 0, 15kHz, 8-bit resolution)
+  ledcSetup(0, 15000, 8);
+  ledcAttachPin(LCD_BL, 0);
+
   // --- I²C for touch
   Wire.begin(IIC_SDA, IIC_SCL);
 
@@ -247,18 +248,18 @@ void TPanelS3::initTPanelS3() {
 
 /**
  * @brief Sets TPanel backlight brightness using PWM
- * 
- * The TPanel backlight chip has 16 adjustment levels (0-15).
- * Uses LEDC PWM with 8-bit resolution for smooth dimming.
- * 
+ *
+ * Uses LEDC PWM with 8-bit resolution for smooth dimming. PWM channel/pin
+ * are configured once in initTPanelS3(); this only updates the duty cycle.
+ *
+ * @note value is a raw 8-bit PWM duty cycle, NOT a percentage
+ *       (e.g. 45 means 45/255 ≈ 17.6% brightness, not 45%).
+ *
  * @param[in] value Brightness level (0-255, 0=off, 255=max)
  * @return The brightness value that was set
  */
 uint8_t TPanelS3::set_backlight_brightness(uint8_t value)
 {
-    ledcSetup(0, 15000, 8);      // Channel 0, 15kHz, 8-bit resolution
-    ledcAttachPin(LCD_BL, 0);    // Attach backlight pin to channel 0
-    ledcWrite(0, value);         // Set brightness value
-    
+    ledcWrite(0, value);
     return value;
 }

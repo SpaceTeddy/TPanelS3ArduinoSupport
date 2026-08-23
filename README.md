@@ -11,6 +11,13 @@ Arduino support library for TPanel S3 with integrated display drivers.
 ## Installation
 
 ### PlatformIO
+> **Important:** the `platform = espressif32 @6.12.0` pin below is required, not
+> just a suggestion. The vendored `Arduino_RGB_Display` (used for the panel)
+> is compiled only when `ESP_ARDUINO_VERSION_MAJOR < 3`. Bumping the
+> `espressif32` platform to a version that pulls Arduino-ESP32 core 3.x will
+> make that class disappear and break the build. Do not upgrade the platform
+> version without first checking that this class still compiles.
+
 ```ini
 [env]
 platform = espressif32 @6.12.0
@@ -53,8 +60,8 @@ void setup() {
     tpanels3.initTPanelS3();
     tpanels3.setRotation(0);     // optional: 0=portrait, 1=landscape, etc.
 
-    // Set initial backlight brightness to 45%
-    tpanels3.set_backlight_brightness(45);  // Set to 45%
+    // Set initial backlight brightness (raw 8-bit PWM duty cycle, 0-255; NOT a percentage)
+    tpanels3.set_backlight_brightness(115);  // ~45% of max brightness
 }
 ```
 
