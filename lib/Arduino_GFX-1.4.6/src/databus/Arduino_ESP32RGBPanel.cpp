@@ -69,7 +69,11 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
   _panel_config->bits_per_pixel = 16;
   _panel_config->num_fbs = 1;
-  _panel_config->bounce_buffer_size_px = 0; // no bounce buffer, DMA the full framebuffer directly
+  // 20-line internal-SRAM staging buffer: decouples the LCD's real-time PCLK
+  // feed from the PSRAM framebuffer, so brief SPI1 bus contention (flash
+  // writes, OTA) causes at most a stale line or two instead of a full-frame
+  // glitch. Matches Espressif's own rgb_panel example (20 * h_res).
+  _panel_config->bounce_buffer_size_px = w * 20;
 #endif
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
   // IDF 5.x retired both alignment fields: sram_trans_align is ignored, and
