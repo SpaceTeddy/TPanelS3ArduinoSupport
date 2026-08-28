@@ -73,6 +73,14 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
   // feed from the PSRAM framebuffer, so brief SPI1 bus contention (flash
   // writes, OTA) causes at most a stale line or two instead of a full-frame
   // glitch. Matches Espressif's own rgb_panel example (20 * h_res).
+  //
+  // Tried 30 lines on 2026-08-27 hoping a bigger reserve would absorb more of
+  // a LittleFS erase: made the visible tearing worse (each bounce-buffer
+  // refill is a plain memcpy() out of the PSRAM framebuffer -- a bigger
+  // buffer means a longer refill, which gives a flash erase a wider window to
+  // land mid-copy) and shrank the largest contiguous internal block from
+  // 28.7 KB to 17.4 KB, uncomfortably close to the ~16 KB mbedTLS needs. Back
+  // to 20; see docs/pitfalls.md in the main repo before changing this again.
   _panel_config->bounce_buffer_size_px = w * 20;
 #endif
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
