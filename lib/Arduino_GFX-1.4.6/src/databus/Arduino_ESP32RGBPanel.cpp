@@ -73,7 +73,8 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
   // Tested: 0 flickers permanently (the buffers are load bearing), 30 is worse
   // than 20 -- a longer refill memcpy() widens the window for a flash erase to
   // land mid-copy. Must divide the frame evenly: 230,400 / 7,200 = 32.
-  // Costs ~28 KB internal RAM (14,400 per buffer, two buffers).
+  // Costs ~28 KB of DMA-capable internal RAM (14,400 per buffer, two of them)
+  // -- the same scarce pool mbedTLS needs 16 KB of in one piece.
   // Background: docs/pitfalls.md in the main repo.
   _panel_config->bounce_buffer_size_px = w * 15;
 #endif
