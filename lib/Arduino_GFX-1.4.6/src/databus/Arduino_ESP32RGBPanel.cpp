@@ -69,19 +69,13 @@ uint16_t *Arduino_ESP32RGBPanel::getFrameBuffer(int16_t w, int16_t h)
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
   _panel_config->bits_per_pixel = 16;
   _panel_config->num_fbs = 1;
-  // 20-line internal-SRAM staging buffer: decouples the LCD's real-time PCLK
-  // feed from the PSRAM framebuffer, so brief SPI1 bus contention (flash
-  // writes, OTA) causes at most a stale line or two instead of a full-frame
-  // glitch. Matches Espressif's own rgb_panel example (20 * h_res).
-  //
-  // Tried 30 lines on 2026-08-27 hoping a bigger reserve would absorb more of
-  // a LittleFS erase: made the visible tearing worse (each bounce-buffer
-  // refill is a plain memcpy() out of the PSRAM framebuffer -- a bigger
-  // buffer means a longer refill, which gives a flash erase a wider window to
-  // land mid-copy) and shrank the largest contiguous internal block from
-  // 28.7 KB to 17.4 KB, uncomfortably close to the ~16 KB mbedTLS needs. Back
-  // to 20; see docs/pitfalls.md in the main repo before changing this again.
-  _panel_config->bounce_buffer_size_px = w * 20;
+  // 15-line staging buffer between the PSRAM framebuffer and the LCD's DMA.
+  // Tested: 0 flickers permanently (the buffers are load bearing), 30 is worse
+  // than 20 -- a longer refill memcpy() widens the window for a flash erase to
+  // land mid-copy. Must divide the frame evenly: 230,400 / 7,200 = 32.
+  // Costs ~28 KB internal RAM (14,400 per buffer, two buffers).
+  // Background: docs/pitfalls.md in the main repo.
+  _panel_config->bounce_buffer_size_px = w * 15;
 #endif
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
   // IDF 5.x retired both alignment fields: sram_trans_align is ignored, and
