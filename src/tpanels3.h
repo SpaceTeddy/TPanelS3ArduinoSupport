@@ -40,7 +40,7 @@ public:
    * Initializes:
    *  - I²C and TouchLib (CST3240)
    *  - Arduino_GFX bus/panel/display
-   *  - LVGL display flush + input drivers (buffers allocated from PSRAM)
+   *  - LVGL display flush + input drivers (direct rendering into the PSRAM framebuffer)
    *  - Touch interrupt line
    *
    * @warning Call exactly once during startup (e.g., from setup()).
@@ -49,6 +49,11 @@ public:
 
   /**
    * @brief Set display rotation.
+   *
+   * With TPANELS3_LVGL_DIRECT_MODE (default) LVGL renders straight into the
+   * panel framebuffer, which only works unrotated. Rotations 1-3 therefore
+   * switch LVGL to partial rendering with a rotating copy (slower, allocates
+   * a PSRAM stripe buffer); going back to 0 re-enables direct mode.
    * @param r Rotation: 0=0°, 1=90°, 2=180°, 3=270°.
    */
   static void setRotation(uint8_t r);
