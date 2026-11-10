@@ -30,6 +30,14 @@
 // Pins/timings for your board (must define LCD_* and XL95X5_* symbols, etc.)
 #include "pin_config.h"
 
+// -------------------- Build options --------------------
+
+/// I²C clock for the touch controller / XL9535 bus. CST3240 and XL9535 both
+/// support Fast-mode (400 kHz); one touch read is ~4x shorter than at 100 kHz.
+#ifndef TPANELS3_I2C_FREQ
+#define TPANELS3_I2C_FREQ 400000
+#endif
+
 // -------------------- Static state (translation-unit scope) --------------------
 
 /// Latched by ISR to indicate a pending touch read.
@@ -206,6 +214,9 @@ void TPanelS3::initTPanelS3() {
 
   // --- Touch init
   s_touch.init();
+  // TouchLib calls Wire.begin() itself (already done above), so set the
+  // clock afterwards to make sure it sticks.
+  Wire.setClock(TPANELS3_I2C_FREQ);
 
   // --- LVGL core + tick
   lv_init();

@@ -87,6 +87,12 @@ void setup() {
 }
 ```
 
+### Build options
+
+| Macro | Default | Meaning |
+|---|---|---|
+| `TPANELS3_I2C_FREQ` | `400000` | I²C clock for the CST3240 touch controller and the XL9535 |
+
 ## Vendored Libraries
 
 This library includes modified versions of:
