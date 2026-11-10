@@ -119,28 +119,39 @@ static void lvglFlush(::lv_disp_drv_t* drv, const ::lv_area_t* area, ::lv_color_
 /**
  * @brief LVGL input read callback for the CST3240 via TouchLib.
  *
- * Reads one-touch data when the ISR flagged a pending event and translates it
- * to LVGL input state + coordinates. Releases state when no touch is present.
+ * The controller is read when the ISR flagged a new report, and also on every
+ * poll while a touch is active. Without the latter a held finger would be
+ * reported as RELEASED whenever LVGL polls between two controller interrupts,
+ * which breaks PRESSING/long-press/gesture handling; and a release that comes
+ * without a final interrupt would never be seen.
  *
  * @param indev LVGL input device (unused)
  * @param data  Out: LVGL touch state and point
  */
 void TPanelS3::lvglTouchRead(::lv_indev_t* /*indev*/, ::lv_indev_data_t* data) {
-  if (s_touchIntFlag) {
+  static bool    s_pressed = false;
+  static int32_t s_lastX = 0;
+  static int32_t s_lastY = 0;
+
+  if (s_touchIntFlag || s_pressed) {
+    // Clear before reading: an interrupt that fires during the I²C transfer
+    // must survive until the next poll.
+    s_touchIntFlag = false;
     s_touch.read();
     TP_Point t = s_touch.getPoint(0);
 
     if (s_touch.getPointNum() == 1 && t.pressure > 0 && t.state != 0) {
-      data->state   = LV_PRESSED;
-      data->point.x = t.x;
-      data->point.y = t.y;
+      s_pressed = true;
+      s_lastX   = t.x;
+      s_lastY   = t.y;
     } else {
-      data->state = LV_RELEASED;
+      s_pressed = false;
     }
-    s_touchIntFlag = false;
-  } else {
-    data->state = LV_RELEASED;
   }
+
+  data->state   = s_pressed ? LV_PRESSED : LV_RELEASED;
+  data->point.x = s_lastX;  // LVGL expects the last point on release, too
+  data->point.y = s_lastY;
 }
 
 // -------------------- Public init --------------------
