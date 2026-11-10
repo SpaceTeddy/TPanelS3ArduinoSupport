@@ -8,7 +8,7 @@
  *  - Hide Arduino_GFX internals from application code
  *
  * Build assumptions:
- *  - PSRAM is available (LVGL buffers are allocated from PSRAM)
+ *  - PSRAM is available (framebuffer and, in partial mode, the LVGL buffer)
  *  - TouchLib is configured for CST3240: #define TOUCH_MODULES_CST_MUTUAL
  */
 
@@ -30,6 +30,30 @@
 // Pins/timings for your board (must define LCD_* and XL95X5_* symbols, etc.)
 #include "pin_config.h"
 
+// -------------------- Build options --------------------
+
+/**
+ * @brief LVGL render mode.
+ *
+ * 1 (default): LV_DISPLAY_RENDER_MODE_DIRECT. LVGL renders straight into the
+ *   RGB panel's scan-out framebuffer. No intermediate LVGL buffers and no
+ *   CPU copy in the flush callback -- every rendered pixel crosses the PSRAM
+ *   bus once instead of three times (render, read back, write to FB), and
+ *   ~1.4 MB of PSRAM stays free. Only valid for rotation 0; setRotation()
+ *   with r != 0 switches to the partial path below at runtime.
+ *
+ * 0: LV_DISPLAY_RENDER_MODE_PARTIAL into a PSRAM buffer, copied into the
+ *   framebuffer by Arduino_GFX (supports all rotations).
+ */
+#ifndef TPANELS3_LVGL_DIRECT_MODE
+#define TPANELS3_LVGL_DIRECT_MODE 1
+#endif
+
+/// Lines per LVGL buffer in partial mode (larger dirty areas are rendered in stripes).
+#ifndef TPANELS3_LVGL_PARTIAL_LINES
+#define TPANELS3_LVGL_PARTIAL_LINES 120
+#endif
+
 // -------------------- Static state (translation-unit scope) --------------------
 
 /// Latched by ISR to indicate a pending touch read.
@@ -46,6 +70,8 @@ static Arduino_RGB_Display*    s_gfx   = nullptr;
 /// LVGL device handles and buffers
 #if LVGL_VERSION_MAJOR >= 9
   static lv_display_t* s_lvDisplay = nullptr;
+  static bool          s_directMode = false;   ///< true while LVGL renders into the panel FB
+  static void*         s_partialBuf = nullptr; ///< lazily allocated for partial mode
 #else
   static lv_disp_draw_buf_t s_lvDrawBuf;
   static lv_color_t*        s_buf1 = nullptr;
@@ -61,8 +87,26 @@ Arduino_RGB_Display* TPanelS3::display() {
   return s_gfx;
 }
 
+#if LVGL_VERSION_MAJOR >= 9
+__attribute__((unused)) static void useDirectMode();
+static bool usePartialMode();
+#endif
+
 void TPanelS3::setRotation(uint8_t r) {
-  if (s_gfx) s_gfx->setRotation(r);
+  if (!s_gfx) return;
+  s_gfx->setRotation(r);
+#if LVGL_VERSION_MAJOR >= 9
+  // Direct mode writes LVGL's pixels unrotated into the framebuffer, so any
+  // rotation other than 0 has to go through Arduino_GFX's rotating copy.
+  if (s_lvDisplay && s_directMode && (r & 3) != 0) {
+    usePartialMode();
+  }
+#if TPANELS3_LVGL_DIRECT_MODE
+  else if (s_lvDisplay && !s_directMode && (r & 3) == 0) {
+    useDirectMode();
+  }
+#endif
+#endif
 }
 
 void IRAM_ATTR TPanelS3::onTouchISR() {
@@ -71,7 +115,7 @@ void IRAM_ATTR TPanelS3::onTouchISR() {
 
 #if LVGL_VERSION_MAJOR >= 9
 /**
- * @brief LVGL v9 display flush callback.
+ * @brief LVGL v9 flush callback for partial mode (copy into the framebuffer).
  * @param disp   LVGL display handle
  * @param area   dirty rectangle to update
  * @param px_map pointer to 16-bit RGB565 pixel buffer
@@ -79,12 +123,54 @@ void IRAM_ATTR TPanelS3::onTouchISR() {
 static void lvglFlush(::lv_display_t* disp, const ::lv_area_t* area, uint8_t* px_map) {
   const uint32_t w = (area->x2 - area->x1 + 1);
   const uint32_t h = (area->y2 - area->y1 + 1);
-#if LV_COLOR_16_SWAP
-  s_gfx->draw16bitBeRGBBitmap(area->x1, area->y1, reinterpret_cast<uint16_t*>(px_map), w, h);
-#else
-  s_gfx->draw16bitRGBBitmap  (area->x1, area->y1, reinterpret_cast<uint16_t*>(px_map), w, h);
-#endif
+  s_gfx->draw16bitRGBBitmap(area->x1, area->y1, reinterpret_cast<uint16_t*>(px_map), w, h);
   lv_display_flush_ready(disp);
+}
+
+/**
+ * @brief LVGL v9 flush callback for direct mode.
+ *
+ * LVGL has already rendered into the scan-out framebuffer; all that is left
+ * is to write the dirty rows back from the data cache so the panel's DMA
+ * (and the bounce-buffer refill) read the new pixels from PSRAM.
+ */
+static void lvglFlushDirect(::lv_display_t* disp, const ::lv_area_t* area, uint8_t* /*px_map*/) {
+  uint16_t* fb = s_gfx->getFramebuffer();
+  const uint32_t start = (uint32_t)(fb + (int32_t)area->y1 * LCD_WIDTH + area->x1);
+  const uint32_t len   = ((uint32_t)(area->y2 - area->y1) * LCD_WIDTH +
+                          (uint32_t)(area->x2 - area->x1 + 1)) * 2U;
+  Cache_WriteBack_Addr(start, len);
+  lv_display_flush_ready(disp);
+}
+
+/// Point LVGL at the panel framebuffer (rotation 0 only).
+static void useDirectMode() {
+  uint16_t* fb = s_gfx->getFramebuffer();
+  if (!fb) return;
+  lv_display_set_buffers(s_lvDisplay, fb, nullptr,
+                         (uint32_t)LCD_WIDTH * LCD_HEIGHT * sizeof(uint16_t),
+                         LV_DISPLAY_RENDER_MODE_DIRECT);
+  lv_display_set_flush_cb(s_lvDisplay, lvglFlushDirect);
+  s_directMode = true;
+  lv_obj_invalidate(lv_screen_active());
+}
+
+/// Render in stripes into a PSRAM buffer and copy (any rotation).
+static bool usePartialMode() {
+  // Note: lv_display_set_buffers() takes the size in BYTES, and in LVGL 9
+  // sizeof(lv_color_t) is 3 -- RGB565 needs 2 bytes per pixel.
+  const uint32_t bytes = (uint32_t)LCD_WIDTH * TPANELS3_LVGL_PARTIAL_LINES * sizeof(uint16_t);
+  if (!s_partialBuf) {
+    s_partialBuf = heap_caps_aligned_alloc(64, bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!s_partialBuf) return false;
+  }
+  // One buffer is enough: the flush copies synchronously, so LVGL could never
+  // render into a second buffer while the first one is being sent anyway.
+  lv_display_set_buffers(s_lvDisplay, s_partialBuf, nullptr, bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
+  lv_display_set_flush_cb(s_lvDisplay, lvglFlush);
+  s_directMode = false;
+  lv_obj_invalidate(lv_screen_active());
+  return true;
 }
 #else
 /**
@@ -151,10 +237,11 @@ void TPanelS3::lvglTouchRead(::lv_indev_t* /*indev*/, ::lv_indev_data_t* data) {
  * Steps:
  *  1. Start I²C and construct TouchLib for CST3240
  *  2. Create Arduino_GFX bus/panel/display objects
- *  3. Reset touch via XL9535 (if supported)
- *  4. Initialize LVGL core, allocate PSRAM buffers, register flush callback
- *  5. Create LVGL input device and wire read callback
- *  6. Attach touch interrupt and bring up the panel
+ *  3. Reset touch via XL9535 (if supported), init touch
+ *  4. Bring up the panel (allocates the PSRAM framebuffer)
+ *  5. Initialize LVGL core; direct mode renders into that framebuffer
+ *  6. Create LVGL input device and wire read callback
+ *  7. Attach touch interrupt
  */
 void TPanelS3::initTPanelS3() {
   // Initialize backlight PWM (15kHz, 8-bit resolution).
@@ -207,19 +294,27 @@ void TPanelS3::initTPanelS3() {
   // --- Touch init
   s_touch.init();
 
+  // --- Panel bring-up. Before LVGL: direct mode needs the framebuffer.
+  s_gfx->begin();
+  s_gfx->fillScreen(BLACK);
+  s_gfx->setRotation(0);
+
   // --- LVGL core + tick
   lv_init();
   lv_tick_set_cb([]() -> uint32_t { return (uint32_t)millis(); });
 
 #if LVGL_VERSION_MAJOR >= 9
-  // Allocate PSRAM buffers for full-screen double buffering
-  lv_color_t* buf1 = (lv_color_t*)heap_caps_malloc(LCD_WIDTH * LCD_HEIGHT * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
-  lv_color_t* buf2 = (lv_color_t*)heap_caps_malloc(LCD_WIDTH * LCD_HEIGHT * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
-  assert(buf1 && buf2);
-
   s_lvDisplay = lv_display_create(LCD_WIDTH, LCD_HEIGHT);
-  lv_display_set_buffers(s_lvDisplay, buf1, buf2, LCD_WIDTH * LCD_HEIGHT, LV_DISPLAY_RENDER_MODE_PARTIAL);
-  lv_display_set_flush_cb(s_lvDisplay, lvglFlush);
+#if TPANELS3_LVGL_DIRECT_MODE
+  if (s_gfx->getFramebuffer()) {
+    useDirectMode();
+  } else
+#endif
+  {
+    bool ok = usePartialMode();
+    assert(ok);
+    (void)ok;
+  }
 #else
   // v8: draw buffer + driver registration
   s_buf1 = (lv_color_t*)heap_caps_malloc(LCD_WIDTH * LCD_HEIGHT * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
@@ -244,11 +339,6 @@ void TPanelS3::initTPanelS3() {
   // --- Touch interrupt line
   pinMode(TOUCH_INT, INPUT_PULLUP);
   attachInterrupt(TOUCH_INT, TPanelS3::onTouchISR, FALLING);
-
-  // --- Panel bring-up
-  s_gfx->begin();
-  s_gfx->fillScreen(BLACK);
-  setRotation(0);
 }
 
 /**

@@ -87,6 +87,25 @@ void setup() {
 }
 ```
 
+### Rendering and build options
+
+By default LVGL renders **directly into the RGB panel's framebuffer**
+(`LV_DISPLAY_RENDER_MODE_DIRECT`). The flush callback only writes the dirty
+rows back from the data cache, there is no intermediate LVGL buffer and no
+copy. Each rendered pixel crosses the (Quad-)PSRAM bus once instead of three
+times, and about 1.4 MB of PSRAM stay free.
+
+Direct mode needs rotation 0. `setRotation(1..3)` switches to partial
+rendering with Arduino_GFX's rotating copy at runtime; `setRotation(0)`
+switches back.
+
+Override via `build_flags` if needed:
+
+| Macro | Default | Meaning |
+|---|---|---|
+| `TPANELS3_LVGL_DIRECT_MODE` | `1` | `0` = always partial mode (render to a PSRAM stripe buffer, copy to the framebuffer) |
+| `TPANELS3_LVGL_PARTIAL_LINES` | `120` | Height of the stripe buffer in partial mode |
+
 ## Vendored Libraries
 
 This library includes modified versions of:
@@ -97,7 +116,7 @@ This library includes modified versions of:
 ## Dependencies
 
 Automatically installed:
-- LVGL 9.2.2
+- LVGL 9.5.0
 - TouchLib
 
 ## License
